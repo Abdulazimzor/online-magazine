@@ -10,12 +10,13 @@ import Checkout from './pages/Checkout';
 import Login from './pages/auth/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import { useCartStore } from './store/cartStore';
 
 const queryClient = new QueryClient();
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [cartCount] = useState(0);
+  const cartCount = useCartStore((state) => state.getCartCount());
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 shadow-sm">
