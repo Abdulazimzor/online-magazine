@@ -1,9 +1,107 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PRODUCTS } from '../data/products';
-import { useCartStore } from '../store/cartStore';
 
-function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Product {
+  id: number;
+  name: string;
+  image: string;
+  rating: number;
+  reviews: number;
+  originalPrice: number;
+  salePrice: number;
+  discount: number;
+  badge?: string;
+  colors: string[];
+  inStock: boolean;
+  category: string;
+}
+
+// ─── Dummy Data (Mocked for Demo) ──────────────────────────────────────────────
+const PRODUCTS: Product[] = [
+  {
+    id: 1,
+    name: 'VISION® – 147 DAYTONA Hyper Silver',
+    image: '/product_wheel.png',
+    rating: 5,
+    reviews: 1,
+    originalPrice: 254.0,
+    salePrice: 209.0,
+    discount: 18,
+    colors: ['#e5e7eb', '#6b7280', '#1f2937'],
+    inStock: true,
+    category: 'Wheels & Tires',
+  },
+  {
+    id: 2,
+    name: 'Thinkware F770 Dash Cam Dual Channel Wifi',
+    image: '/product_dashcam.png',
+    rating: 3,
+    reviews: 1,
+    originalPrice: 268.99,
+    salePrice: 249.99,
+    discount: 8,
+    colors: ['#1f2937', '#374151'],
+    inStock: true,
+    category: 'Electronics',
+  },
+  {
+    id: 3,
+    name: 'Technaxx car Alarm with Charging Function',
+    image: '/product_alarm.png',
+    rating: 5,
+    reviews: 1,
+    originalPrice: 51.99,
+    salePrice: 47.99,
+    discount: 0,
+    badge: 'SUPER PRICE',
+    colors: ['#1f2937'],
+    inStock: true,
+    category: 'Electronics',
+  },
+  {
+    id: 4,
+    name: 'Spyder® – Projector Headlights',
+    image: '/product_headlights.png',
+    rating: 5,
+    reviews: 1,
+    originalPrice: 582.99,
+    salePrice: 521.89,
+    discount: 11,
+    colors: ['#9ca3af', '#d1d5db'],
+    inStock: true,
+    category: 'Lighting',
+  },
+  {
+    id: 6,
+    name: 'SnowyFox RV 15Amp to 50Amp Adapter',
+    image: '/product_adapter.png',
+    rating: 5,
+    reviews: 1,
+    originalPrice: 25.98,
+    salePrice: 23.88,
+    discount: 0,
+    badge: 'TOP PRODUCT',
+    colors: ['#f59e0b'],
+    inStock: true,
+    category: 'Accessories',
+  },
+  {
+    id: 7,
+    name: 'Shell Rotella T1 SAE 30 Conventional',
+    image: '/product_dashcam.png',
+    rating: 5,
+    reviews: 1,
+    originalPrice: 24.85,
+    salePrice: 17.85,
+    discount: 29,
+    colors: ['#dc2626', '#fbbf24'],
+    inStock: true,
+    category: 'Engine Parts',
+  },
+];
+
+function StarRating({ rating, reviews }: { rating: number, reviews?: number }) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex gap-0.5">
@@ -18,61 +116,55 @@ function StarRating({ rating, reviews }: { rating: number; reviews: number }) {
           </svg>
         ))}
       </div>
-      <span className="text-sm text-gray-500 font-medium">({reviews} reviews)</span>
+      {reviews !== undefined && <span className="text-sm text-gray-500">({reviews} reviews)</span>}
     </div>
   );
 }
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const product = PRODUCTS.find((p) => p.id === Number(id));
-  const addToCart = useCartStore((s) => s.addToCart);
-
   const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState<string | null>(product?.colors?.[0] || null);
-  const [added, setAdded] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+
+  const product = PRODUCTS.find((p) => p.id === Number(id));
 
   if (!product) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-gray-50">
-        <h2 className="text-3xl font-black text-gray-900 mb-4">Product Not Found</h2>
-        <p className="text-gray-500 mb-6">The product you are looking for does not exist or has been removed.</p>
-        <Link to="/shop" className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">
-          Return to Shop
-        </Link>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">Product Not Found</h1>
+        <Link to="/shop" className="text-blue-600 hover:underline">Return to Shop</Link>
       </div>
     );
   }
 
-  const handleAddToCart = () => {
-    addToCart(product, quantity);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
-  };
+  // Set default color if not selected
+  if (!selectedColor && product.colors.length > 0) {
+    setSelectedColor(product.colors[0]);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-6">
         {/* Breadcrumb */}
-        <nav className="flex text-sm text-gray-500 mb-8 gap-2 items-center">
-          <Link to="/" className="hover:text-blue-600 transition">Home</Link>
-          <span>/</span>
-          <Link to="/shop" className="hover:text-blue-600 transition">Shop</Link>
-          <span>/</span>
-          <span className="text-gray-900 font-medium">{product.name}</span>
-        </nav>
+        <div className="text-sm text-gray-500 mb-8">
+          <Link to="/" className="hover:text-blue-600">Home</Link> &gt;{' '}
+          <Link to="/shop" className="hover:text-blue-600">Shop</Link> &gt;{' '}
+          <span className="text-gray-900 font-medium">{product.category}</span> &gt;{' '}
+          <span>{product.name}</span>
+        </div>
 
-        <div className="bg-white rounded-3xl border border-gray-100 p-6 md:p-12 shadow-sm flex flex-col lg:flex-row gap-12">
-          {/* Left: Image Gallery */}
-          <div className="flex-1 flex flex-col gap-4">
-            <div className="relative aspect-square rounded-2xl border border-gray-100 bg-gray-50 flex items-center justify-center p-8 overflow-hidden group">
+        <div className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-12">
+          
+          {/* Image Gallery */}
+          <div className="w-full lg:w-1/2 flex flex-col gap-4">
+            <div className="bg-gray-50 rounded-2xl p-8 aspect-square flex items-center justify-center relative overflow-hidden border border-gray-100 group">
               {product.discount > 0 && (
-                <span className="absolute top-6 left-6 z-10 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-lg shadow-sm">
+                <span className="absolute top-4 left-4 z-10 bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-sm">
                   {product.discount}% OFF
                 </span>
               )}
               {product.badge && (
-                <span className={`absolute top-6 left-6 z-10 text-white text-sm font-bold px-3 py-1 rounded-lg shadow-sm ${
+                <span className={`absolute top-4 ${product.discount > 0 ? 'left-20' : 'left-4'} z-10 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-sm ${
                   product.badge === 'TOP PRODUCT' ? 'bg-green-500' : 'bg-orange-500'
                 }`}>
                   {product.badge}
@@ -101,138 +193,94 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* Right: Product Info */}
-          <div className="flex-1 flex flex-col justify-center">
-            <h1 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-4">
+          {/* Product Info */}
+          <div className="w-full lg:w-1/2 flex flex-col">
+            <h1 className="text-3xl lg:text-4xl font-black text-gray-900 leading-tight mb-4">
               {product.name}
             </h1>
             
             <div className="flex items-center gap-4 mb-6">
               <StarRating rating={product.rating} reviews={product.reviews} />
               <div className="h-4 w-px bg-gray-300"></div>
-              <div className="flex items-center gap-1.5">
-                <div className={`w-2.5 h-2.5 rounded-full ${product.inStock ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className={`text-sm font-medium ${product.inStock ? 'text-green-600' : 'text-red-600'}`}>
-                  {product.inStock ? 'In Stock Ready to Ship' : 'Out of Stock'}
-                </span>
-              </div>
+              <span className={`text-sm font-semibold ${product.inStock ? 'text-green-600' : 'text-red-500'}`}>
+                {product.inStock ? '✓ In Stock' : 'Out of Stock'}
+              </span>
             </div>
 
-            <div className="flex items-end gap-4 mb-8">
+            <div className="flex items-end gap-3 mb-8">
               <span className="text-4xl font-black text-red-500">${product.salePrice.toFixed(2)}</span>
               {product.originalPrice > product.salePrice && (
                 <span className="text-xl text-gray-400 line-through mb-1">${product.originalPrice.toFixed(2)}</span>
               )}
             </div>
 
-            <p className="text-gray-600 text-lg leading-relaxed mb-8">
-              {product.description || 'Premium quality auto part designed for durability and performance.'}
+            <p className="text-gray-600 leading-relaxed mb-8">
+              Experience the best quality with our {product.name}. Designed for optimal performance and durability. This product comes with a standard warranty and fits seamlessly with your setup.
             </p>
 
             {/* Colors */}
-            {product.colors && product.colors.length > 0 && (
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Available Colors</h3>
-                  {selectedColor && (
-                    <span
-                      className="text-xs font-semibold px-3 py-1 rounded-full text-white shadow-sm transition-all duration-300"
-                      style={{ backgroundColor: selectedColor }}
-                    >
-                      Selected
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-3 flex-wrap">
-                  {product.colors.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`w-11 h-11 rounded-full border-4 transition-all duration-200 flex items-center justify-center shadow-sm ${
-                        selectedColor === color
-                          ? 'border-white ring-2 ring-blue-600 scale-110 shadow-md'
-                          : 'border-white ring-1 ring-gray-200 hover:scale-110 hover:ring-gray-400'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    >
-                      {selectedColor === color && (
-                        <svg className="w-5 h-5 text-white drop-shadow-md" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
+            <div className="mb-8">
+              <h3 className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-wider">Available Colors</h3>
+              <div className="flex gap-3">
+                {product.colors.map((c, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedColor(c)}
+                    className={`w-10 h-10 rounded-full border-2 transition-all ${selectedColor === c ? 'border-blue-500 scale-110' : 'border-gray-200 hover:scale-105'}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
               </div>
-            )}
+            </div>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-10 border-t border-gray-100 pt-8">
-              {/* Quantity */}
-              <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl h-14 w-32">
+            {/* Quantity and Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-10">
+              <div className="flex items-center border border-gray-200 rounded-xl bg-white w-32">
                 <button 
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  className="w-10 h-full flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-l-xl transition"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" /></svg>
-                </button>
-                <div className="flex-1 flex items-center justify-center font-bold text-gray-900">
-                  {quantity}
-                </div>
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="px-4 py-3 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded-l-xl transition-colors"
+                >-</button>
+                <input 
+                  type="text" 
+                  value={quantity} 
+                  readOnly 
+                  className="w-full text-center text-gray-900 font-bold bg-transparent outline-none" 
+                />
                 <button 
-                  onClick={() => setQuantity(q => q + 1)}
-                  className="w-10 h-full flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-r-xl transition"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                </button>
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="px-4 py-3 text-gray-500 hover:text-blue-600 hover:bg-gray-50 rounded-r-xl transition-colors"
+                >+</button>
               </div>
 
-              {/* Add to Cart Button */}
-              <button
-                onClick={handleAddToCart}
-                disabled={!product.inStock}
-                className={`flex-1 h-14 rounded-xl flex items-center justify-center gap-3 font-bold text-lg transition-all duration-300 ${
-                  !product.inStock
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : added
-                    ? 'bg-green-500 text-white shadow-lg shadow-green-500/30 translate-y-0.5'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30 hover:shadow-xl hover:-translate-y-0.5'
-                }`}
-              >
-                {added ? (
-                  <>
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Added to Cart!
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Add to Cart
-                  </>
-                )}
+              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-blue-600/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Add to Cart
+              </button>
+              
+              <button className="w-14 h-14 flex items-center justify-center rounded-xl border-2 border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-500 hover:bg-red-50 transition-all flex-shrink-0">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
               </button>
             </div>
 
-            {/* Features list */}
-            <ul className="space-y-3 text-sm text-gray-600 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-              <li className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Free shipping on orders over $99
-              </li>
-              <li className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Order before 2 PM for same-day dispatch
-              </li>
-              <li className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                Secure 256-bit SSL encryption
-              </li>
-            </ul>
+            {/* Additional Details */}
+            <div className="border-t border-gray-100 pt-8 space-y-4">
+              <div className="flex text-sm">
+                <span className="w-32 font-bold text-gray-900">SKU:</span>
+                <span className="text-gray-500">PRD-{product.id.toString().padStart(5, '0')}</span>
+              </div>
+              <div className="flex text-sm">
+                <span className="w-32 font-bold text-gray-900">Category:</span>
+                <Link to="/shop" className="text-blue-600 hover:underline">{product.category}</Link>
+              </div>
+              <div className="flex text-sm">
+                <span className="w-32 font-bold text-gray-900">Tags:</span>
+                <span className="text-gray-500">Premium, {product.category.split(' ')[0]}, Quality</span>
+              </div>
+            </div>
 
           </div>
         </div>
