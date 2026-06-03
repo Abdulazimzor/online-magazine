@@ -22,11 +22,16 @@ function Navbar() {
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-6">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-            <span className="text-white font-black text-xs">AP</span>
+        <Link to="/" className="flex items-center gap-3 flex-shrink-0 group">
+          <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl shadow-purple-500/30 transform group-hover:scale-105 transition-all duration-300">
+            <svg className="w-7 h-7 text-white transform group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
           </div>
-          <span className="font-black text-gray-900 text-lg hidden sm:block">AutoParts</span>
+          <span className="font-black text-3xl hidden sm:block tracking-tighter">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Turbo</span>
+            <span className="text-gray-900">Gear</span>
+          </span>
         </Link>
 
         {/* Search bar */}
@@ -130,12 +135,17 @@ function Footer() {
     <footer className="bg-gray-900 text-gray-400 mt-auto">
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
         <div className="col-span-2 md:col-span-1">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-              <span className="text-white font-black text-xs">AP</span>
+          <Link to="/" className="flex items-center gap-3 mb-6 group inline-flex">
+            <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20 transform group-hover:scale-105 transition-all duration-300">
+              <svg className="w-7 h-7 text-white transform group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             </div>
-            <span className="text-white font-black text-lg">AutoParts</span>
-          </div>
+            <span className="font-black text-3xl tracking-tighter">
+              <span className="text-white">Turbo</span>
+              <span className="text-gray-400">Gear</span>
+            </span>
+          </Link>
           <p className="text-sm leading-relaxed">Your one-stop shop for premium auto parts, tools, and accessories.</p>
         </div>
         {[
@@ -155,8 +165,8 @@ function Footer() {
           </div>
         ))}
       </div>
-      <div className="border-t border-gray-800 py-4 text-center text-xs">
-        © {new Date().getFullYear()} AutoParts Premium. All rights reserved.
+      <div className="border-t border-gray-800 py-6 text-center text-sm">
+        © {new Date().getFullYear()} TurboGear Premium. All rights reserved.
       </div>
     </footer>
   );
