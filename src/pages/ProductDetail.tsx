@@ -78,48 +78,25 @@ export default function ProductDetail() {
                   {product.badge}
                 </span>
               )}
-              {/* Isolated image + color overlay using mix-blend-mode */}
-              <div className="relative w-full h-full" style={{ isolation: 'isolate' }}>
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x600?text=Product'; }}
-                />
-                {/* Color overlay — multiply blends with the grayscale image to tint it */}
-                {selectedColor && selectedColor !== '#e5e7eb' && selectedColor !== '#C0C0C0' && (
-                  <div
-                    className="absolute inset-0 rounded-full transition-all duration-400 pointer-events-none"
-                    style={{
-                      backgroundColor: selectedColor,
-                      mixBlendMode: 'multiply',
-                      opacity: 0.75,
-                    }}
-                  />
-                )}
-              </div>
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x600?text=Product'; }}
+              />
             </div>
 
-            {/* Thumbnails — each shows the wheel tinted in that color */}
+            {/* Thumbnails */}
             <div className="flex gap-3">
-              {product.colors.map((color, i) => (
-                <button
+              {[1, 2, 3].map((_, i) => (
+                <div
                   key={i}
-                  onClick={() => setSelectedColor(color)}
-                  className={`relative w-24 h-24 rounded-xl border-2 flex items-center justify-center p-2 cursor-pointer transition-all duration-300 overflow-hidden bg-gray-50 ${
-                    selectedColor === color ? 'border-blue-600 shadow-md scale-105' : 'border-gray-100 hover:border-gray-300'
+                  className={`w-24 h-24 rounded-xl border-2 flex items-center justify-center p-2 transition-colors bg-gray-50 ${
+                    i === 0 ? 'border-blue-600 shadow-md scale-105' : 'border-gray-100 hover:border-gray-300'
                   }`}
                 >
-                  <div className="relative w-full h-full" style={{ isolation: 'isolate' }}>
-                    <img src={product.image} alt="thumbnail" className="w-full h-full object-contain" />
-                    {color !== '#e5e7eb' && color !== '#C0C0C0' && (
-                      <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{ backgroundColor: color, mixBlendMode: 'multiply', opacity: 0.75 }}
-                      />
-                    )}
-                  </div>
-                </button>
+                  <img src={product.image} alt="thumbnail" className="w-full h-full object-contain opacity-90" />
+                </div>
               ))}
             </div>
           </div>
