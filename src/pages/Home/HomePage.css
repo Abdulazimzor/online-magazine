@@ -1,0 +1,35 @@
+.mag-home {
+  min-height: 100vh;
+  background-color: var(--color-background);
+}
+
+.mag-home__articles-section {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-12) var(--spacing-8);
+}
+
+.mag-home__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-6);
+}
+
+/* Responsiveness for smaller screens (though requested Desktop-first) */
+@media (max-width: 1200px) {
+  .mag-home__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .mag-home__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .mag-home__grid {
+    grid-template-columns: 1fr;
+  }
+}

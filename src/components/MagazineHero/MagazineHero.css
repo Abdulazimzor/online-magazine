@@ -1,0 +1,72 @@
+.mag-hero {
+  position: relative;
+  height: 600px;
+  width: 100%;
+  background-image: url('https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?auto=format&fit=crop&q=80&w=1920');
+  background-size: cover;
+  background-position: center 20%;
+  display: flex;
+  align-items: center;
+}
+
+/* Fallback gradient if image fails, or to ensure text readability */
+.mag-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(20, 30, 40, 0.8) 0%, rgba(20, 30, 40, 0.2) 60%, rgba(0,0,0,0) 100%);
+}
+
+.mag-hero__content {
+  position: relative;
+  z-index: 10;
+  max-width: 600px;
+  margin-left: var(--spacing-16);
+  color: white;
+}
+
+.mag-hero__subheading {
+  font-family: var(--font-family-sans);
+  font-size: 0.875rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: var(--spacing-4);
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.mag-hero__heading {
+  font-family: var(--font-family-serif);
+  font-size: 3.5rem;
+  line-height: 1.1;
+  margin-bottom: var(--spacing-4);
+  font-weight: 700;
+}
+
+.mag-hero__description {
+  font-family: var(--font-family-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: var(--spacing-8);
+  opacity: 0.8;
+  max-width: 500px;
+}
+
+.mag-hero__button {
+  background-color: white;
+  color: black;
+  font-family: var(--font-family-sans);
+  font-weight: 600;
+  padding: 12px 32px;
+  border-radius: 6px;
+  display: inline-block;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.mag-hero__button:hover {
+  background-color: #f3f4f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}

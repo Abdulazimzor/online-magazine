@@ -1,0 +1,100 @@
+.splash-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.splash__logo-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: logoFloat 3s ease-in-out infinite, pulseFade 2s ease-in-out infinite;
+}
+
+.splash__logo-icon {
+  animation: rotateIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.splash__brand-name {
+  margin-top: var(--spacing-6);
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideUpFade 0.8s ease-out 0.5s forwards;
+}
+
+.splash__slogan {
+  margin-top: var(--spacing-2);
+  font-size: 1rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out 0.8s forwards;
+}
+
+/* Background animated circles */
+.splash__circle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+  filter: blur(40px);
+  z-index: 0;
+}
+
+.splash__circle--1 {
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  left: -100px;
+  animation: floatCircle1 10s infinite alternate;
+}
+
+.splash__circle--2 {
+  width: 400px;
+  height: 400px;
+  bottom: -150px;
+  right: -150px;
+  animation: floatCircle2 15s infinite alternate;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes rotateIn {
+  from { transform: rotate(-90deg) scale(0.5); opacity: 0; }
+  to { transform: rotate(0) scale(1); opacity: 1; }
+}
+
+@keyframes slideUpFade {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes floatCircle1 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+@keyframes floatCircle2 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-50px, -50px); }
+}
