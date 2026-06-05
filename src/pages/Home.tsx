@@ -1,122 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface Product {
-  id: number;
-  name: string;
-  image: string;
-  rating: number;
-  reviews: number;
-  originalPrice: number;
-  salePrice: number;
-  discount: number;
-  badge?: string;
-  colors: string[];
-  inStock: boolean;
-}
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-const PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: 'VISION® – 147 DAYTONA Hyper Silver',
-    image: '/product_wheel.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 254.0,
-    salePrice: 209.0,
-    discount: 18,
-    colors: ['#e5e7eb', '#6b7280', '#1f2937'],
-    inStock: true,
-  },
-  {
-    id: 2,
-    name: 'Thinkware F770 Dash Cam Dual Channel Wifi',
-    image: '/product_dashcam.png',
-    rating: 3,
-    reviews: 1,
-    originalPrice: 268.99,
-    salePrice: 249.99,
-    discount: 8,
-    colors: ['#1f2937', '#374151'],
-    inStock: true,
-  },
-  {
-    id: 3,
-    name: 'Technaxx car Alarm with Charging Function',
-    image: '/product_alarm.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 51.99,
-    salePrice: 47.99,
-    discount: 0,
-    badge: 'SUPER PRICE',
-    colors: ['#1f2937'],
-    inStock: true,
-  },
-  {
-    id: 4,
-    name: 'Spyder® – Projector Headlights',
-    image: '/product_headlights.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 582.99,
-    salePrice: 521.89,
-    discount: 11,
-    colors: ['#9ca3af', '#d1d5db'],
-    inStock: true,
-  },
-  {
-    id: 5,
-    name: 'Spec-D® – Projector Headlights',
-    image: '/product_headlights.png',
-    rating: 4,
-    reviews: 1,
-    originalPrice: 364.86,
-    salePrice: 279.02,
-    discount: 24,
-    colors: ['#6b7280', '#1f2937'],
-    inStock: true,
-  },
-  {
-    id: 6,
-    name: 'SnowyFox RV 15Amp to 50Amp Adapter – 15Male',
-    image: '/product_adapter.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 25.98,
-    salePrice: 23.88,
-    discount: 0,
-    badge: 'TOP PRODUCT',
-    colors: ['#f59e0b'],
-    inStock: true,
-  },
-  {
-    id: 7,
-    name: 'Shell Rotella T1 SAE 30 Conventional Heavy Duty',
-    image: '/product_dashcam.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 24.85,
-    salePrice: 17.85,
-    discount: 29,
-    colors: ['#dc2626', '#fbbf24'],
-    inStock: true,
-  },
-  {
-    id: 8,
-    name: 'Schumacher 125 Chrome Fan 12V',
-    image: '/product_wheel.png',
-    rating: 4,
-    reviews: 1,
-    originalPrice: 45.99,
-    salePrice: 30.54,
-    discount: 34,
-    colors: ['#9ca3af'],
-    inStock: true,
-  },
-];
+import { PRODUCTS, type Product } from '../data/products';
+import { useCartStore } from '../store/cartStore';
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
 function StarRating({ rating }: { rating: number }) {
@@ -139,6 +24,16 @@ function StarRating({ rating }: { rating: number }) {
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function ProductCard({ product }: { product: Product }) {
   const [wished, setWished] = useState(false);
+  const addToCart = useCartStore((s) => s.addToCart);
+  const [added, setAdded] = useState(false);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-4 flex flex-col gap-3 relative group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
@@ -221,8 +116,15 @@ function ProductCard({ product }: { product: Product }) {
       </div>
 
       {/* Add to Cart (appears on hover) */}
-      <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200">
-        Add to Cart
+      <button 
+        onClick={handleAddToCart}
+        className={`w-full py-2 text-white text-xs font-semibold rounded-xl transition-all duration-200 ${
+          added 
+            ? 'bg-green-500 opacity-100 translate-y-0' 
+            : 'bg-blue-600 hover:bg-blue-700 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0'
+        }`}
+      >
+        {added ? 'Added to Cart!' : 'Add to Cart'}
       </button>
     </div>
   );
@@ -342,15 +244,15 @@ export default function Home() {
         <h2 className="text-2xl font-black text-gray-900 mb-6">Shop by Category</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {[
-            { name: 'Wheels & Tires', icon: '🛞', color: 'from-blue-500 to-blue-700' },
-            { name: 'Lighting', icon: '💡', color: 'from-amber-500 to-orange-600' },
-            { name: 'Electronics', icon: '📡', color: 'from-purple-500 to-purple-700' },
-            { name: 'Engine Parts', icon: '⚙️', color: 'from-gray-600 to-gray-800' },
-            { name: 'Accessories', icon: '🔧', color: 'from-green-500 to-emerald-700' },
+            { name: 'Wheels & Tires', icon: '🛞', color: 'from-blue-500 to-blue-700', slug: 'wheels-tires' },
+            { name: 'Lighting', icon: '💡', color: 'from-amber-500 to-orange-600', slug: 'lighting' },
+            { name: 'Electronics', icon: '📡', color: 'from-purple-500 to-purple-700', slug: 'electronics' },
+            { name: 'Engine Parts', icon: '⚙️', color: 'from-gray-600 to-gray-800', slug: 'engine-parts' },
+            { name: 'Accessories', icon: '🔧', color: 'from-green-500 to-emerald-700', slug: 'accessories' },
           ].map(cat => (
             <Link
               key={cat.name}
-              to="/shop"
+              to={`/shop?category=${cat.slug}`}
               className={`bg-gradient-to-br ${cat.color} text-white rounded-2xl p-6 flex flex-col items-center gap-3 hover:scale-105 hover:shadow-lg transition-all duration-200`}
             >
               <span className="text-3xl">{cat.icon}</span>
