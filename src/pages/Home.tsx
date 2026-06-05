@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PRODUCTS, type Product } from '../data/products';
+import { type Product } from '../data/products';
+import { useProductStore } from '../store/productStore';
 import { useCartStore } from '../store/cartStore';
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
@@ -132,6 +133,8 @@ function ProductCard({ product }: { product: Product }) {
 
 // ─── Home Page ────────────────────────────────────────────────────────────────
 export default function Home() {
+  const products = useProductStore((state) => state.products);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Hero ── */}
@@ -293,7 +296,7 @@ export default function Home() {
               <Link to="/shop" className="text-sm text-blue-600 font-semibold hover:underline">View all →</Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {PRODUCTS.map(p => (
+              {products.map(p => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
@@ -331,7 +334,7 @@ export default function Home() {
           <Link to="/shop" className="text-sm text-blue-600 font-semibold hover:underline">See all →</Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {PRODUCTS.slice(0, 4).map(p => (
+          {products.slice(0, 4).map(p => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>

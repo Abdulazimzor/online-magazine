@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { PRODUCTS, type Product } from '../data/products';
+import { type Product } from '../data/products';
+import { useProductStore } from '../store/productStore';
 import { useCartStore } from '../store/cartStore';
 
 // ─── Category config ────────────────────────────────────────────────────────
@@ -145,8 +146,9 @@ export default function Shop() {
   const activeCategory = searchParams.get('category') || 'all';
 
   const activeCategoryInfo = CATEGORIES.find((c) => c.slug === activeCategory) || CATEGORIES[0];
+  const products = useProductStore((state) => state.products);
 
-  const filtered = PRODUCTS.filter((p) => {
+  const filtered = products.filter((p) => {
     const matchesCategory =
       activeCategory === 'all' || getProductCategory(p) === activeCategory;
     const matchesSearch =

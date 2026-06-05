@@ -57,6 +57,7 @@ function Navbar() {
             { to: '/', label: 'Home' },
             { to: '/shop', label: 'Shop' },
             { to: '/dashboard', label: 'Account' },
+            { to: '/admin', label: 'Admin' },
           ].map(link => (
             <NavLink
               key={link.to}
@@ -123,6 +124,7 @@ function Navbar() {
           {[
             { to: '/', label: '🏠 Home' },
             { to: '/shop', label: '🛒 Shop' },
+            { to: '/admin', label: '⚙️ Admin' },
             { to: '/cart', label: '🛍️ Cart' },
             ...(isAuthenticated
               ? [

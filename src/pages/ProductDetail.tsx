@@ -17,89 +17,7 @@ interface Product {
   category: string;
 }
 
-// ─── Dummy Data (Mocked for Demo) ──────────────────────────────────────────────
-const PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: 'VISION® – 147 DAYTONA Hyper Silver',
-    image: '/product_wheel.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 254.0,
-    salePrice: 209.0,
-    discount: 18,
-    colors: ['#e5e7eb', '#6b7280', '#1f2937'],
-    inStock: true,
-    category: 'Wheels & Tires',
-  },
-  {
-    id: 2,
-    name: 'Thinkware F770 Dash Cam Dual Channel Wifi',
-    image: '/product_dashcam.png',
-    rating: 3,
-    reviews: 1,
-    originalPrice: 268.99,
-    salePrice: 249.99,
-    discount: 8,
-    colors: ['#1f2937', '#374151'],
-    inStock: true,
-    category: 'Electronics',
-  },
-  {
-    id: 3,
-    name: 'Technaxx car Alarm with Charging Function',
-    image: '/product_alarm.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 51.99,
-    salePrice: 47.99,
-    discount: 0,
-    badge: 'SUPER PRICE',
-    colors: ['#1f2937'],
-    inStock: true,
-    category: 'Electronics',
-  },
-  {
-    id: 4,
-    name: 'Spyder® – Projector Headlights',
-    image: '/product_headlights.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 582.99,
-    salePrice: 521.89,
-    discount: 11,
-    colors: ['#9ca3af', '#d1d5db'],
-    inStock: true,
-    category: 'Lighting',
-  },
-  {
-    id: 6,
-    name: 'SnowyFox RV 15Amp to 50Amp Adapter',
-    image: '/product_adapter.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 25.98,
-    salePrice: 23.88,
-    discount: 0,
-    badge: 'TOP PRODUCT',
-    colors: ['#f59e0b'],
-    inStock: true,
-    category: 'Accessories',
-  },
-  {
-    id: 7,
-    name: 'Shell Rotella T1 SAE 30 Conventional',
-    image: '/product_dashcam.png',
-    rating: 5,
-    reviews: 1,
-    originalPrice: 24.85,
-    salePrice: 17.85,
-    discount: 29,
-    colors: ['#dc2626', '#fbbf24'],
-    inStock: true,
-    category: 'Engine Parts',
-  },
-];
+import { useProductStore } from '../store/productStore';
 
 function StarRating({ rating, reviews }: { rating: number, reviews?: number }) {
   return (
@@ -126,7 +44,8 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
-  const product = PRODUCTS.find((p) => p.id === Number(id));
+  const products = useProductStore((state) => state.products);
+  const product = products.find((p) => p.id === Number(id));
 
   if (!product) {
     return (
