@@ -18,7 +18,6 @@ const queryClient = new QueryClient();
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [cartCount] = useState(0);
   const { isAuthenticated, logout } = useAuth();
   const cartCount = useCartStore((state) => state.getCartCount());
 
