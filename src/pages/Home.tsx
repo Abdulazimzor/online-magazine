@@ -135,44 +135,106 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-24 flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1 space-y-6">
-            <span className="inline-block text-xs font-semibold tracking-widest text-blue-400 uppercase">New Arrivals 2026</span>
-            <h1 className="text-5xl md:text-6xl font-black leading-tight">
-              Premium Auto<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Parts & Tools</span>
+      <section className="relative overflow-hidden bg-[#0a0f1c] min-h-[600px] flex items-center border-b border-gray-800/50">
+        {/* Decorative background effects */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-600/10 blur-[120px]" />
+          <div className="absolute top-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-cyan-500/10 blur-[100px]" />
+          <div className="absolute bottom-0 left-[20%] w-[50%] h-[50%] rounded-full bg-purple-500/10 blur-[120px]" />
+          {/* Grid pattern */}
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiPjxwYXRoIGQ9Ik0wIDQwaDQwVjBIMHoiLz48L2c+PC9zdmc+')] opacity-50" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-6 py-20 flex flex-col md:flex-row items-center gap-12 z-10 w-full">
+          <div className="flex-1 space-y-8 relative z-20">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 backdrop-blur-md">
+              <span className="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse shadow-[0_0_10px_rgba(96,165,250,0.8)]"></span>
+              <span className="text-xs font-bold tracking-widest text-blue-300 uppercase">New Arrivals 2026</span>
+            </div>
+            
+            <h1 className="text-5xl md:text-[5.5rem] font-black leading-[1.05] tracking-tight text-white drop-shadow-sm">
+              Upgrade Your <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 filter drop-shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+                Performance
+              </span>
             </h1>
-            <p className="text-gray-400 text-lg max-w-md">
-              Shop the widest selection of high-performance car parts, electronics, and accessories.
+            
+            <p className="text-blue-100/60 text-lg md:text-xl max-w-lg leading-relaxed font-medium">
+              Discover the ultimate collection of premium auto parts, cutting-edge electronics, and pro-grade tools.
             </p>
-            <div className="flex gap-4 flex-wrap">
+            
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <Link
                 to="/shop"
-                className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-all duration-200 hover:scale-105 shadow-lg shadow-blue-900/30"
+                className="group relative px-8 py-4 bg-white text-[#0a0f1c] font-bold rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all hover:scale-105 hover:shadow-[0_0_50px_rgba(59,130,246,0.4)] flex items-center justify-center gap-2"
               >
-                Shop Now →
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <span className="relative z-10">Shop Collection</span>
+                <svg className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
               </Link>
               <Link
                 to="/shop"
-                className="px-8 py-3 border border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white font-semibold rounded-xl transition-all duration-200"
+                className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-2xl backdrop-blur-sm transition-all hover:scale-105 flex items-center justify-center"
               >
                 View Deals
               </Link>
             </div>
+
+            <div className="pt-8 mt-4 flex items-center gap-6 border-t border-white/10">
+              <div className="flex -space-x-3">
+                {[1,2,3,4].map(i => (
+                  <img key={i} src={`https://i.pravatar.cc/100?img=${i+10}`} alt="user" className="w-10 h-10 rounded-full border-2 border-[#0a0f1c]" />
+                ))}
+              </div>
+              <div className="text-sm">
+                <div className="flex text-amber-400 text-sm">
+                  ★★★★★
+                </div>
+                <span className="text-white/60 font-medium">Trusted by 10k+ drivers</span>
+              </div>
+            </div>
           </div>
-          <div className="flex-1 flex justify-center">
+
+          <div className="flex-1 w-full relative flex justify-center items-center mt-10 md:mt-0 z-10">
+            {/* Glowing background behind car */}
+            <div className="absolute w-[80%] h-[80%] bg-gradient-to-tr from-blue-600/30 to-cyan-400/30 rounded-full blur-[80px] -z-10 animate-pulse" style={{ animationDuration: '4s' }} />
+            
             <img
               src="/promo_car.png"
               alt="Premium red sports car"
-              className="w-full max-w-lg object-contain drop-shadow-2xl"
+              className="w-full max-w-[120%] lg:max-w-[130%] object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,0.6)] transform -rotate-2 hover:rotate-0 hover:scale-105 transition-all duration-700 ease-out relative z-10"
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
+            
+            {/* Floating UI Elements */}
+            <div className="absolute top-[5%] right-[5%] bg-white/10 backdrop-blur-md border border-white/20 p-3.5 rounded-2xl shadow-2xl z-20 animate-bounce" style={{ animationDuration: '3s' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <span className="text-green-400 text-xl">⚡</span>
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">Turbo Kit</p>
+                  <p className="text-green-400 text-xs font-semibold">In Stock</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-[10%] left-[0%] bg-white/10 backdrop-blur-md border border-white/20 p-3.5 rounded-2xl shadow-2xl z-20 animate-bounce" style={{ animationDuration: '4s', animationDelay: '1s' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <span className="text-blue-400 text-xl">🛡️</span>
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">Warranty</p>
+                  <p className="text-blue-300 text-xs font-semibold">5 Years</p>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
-        {/* decorative gradient blobs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
       </section>
 
       {/* ── Stats bar ── */}
