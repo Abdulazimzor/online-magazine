@@ -11,6 +11,7 @@ export interface Product {
   colors: string[];
   inStock: boolean;
   description?: string;
+  date?: string;
 }
 
 export const PRODUCTS: Product[] = [
