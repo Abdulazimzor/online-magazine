@@ -5,7 +5,7 @@ import { type Product } from '../data/products';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminDashboard() {
-  const { products, updateProductPrice, updateProductDiscount } = useProductStore();
+  const { products, updateProductPrice, updateProductDiscount, addProduct } = useProductStore();
   const { orders } = useOrderStore();
   
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders'>('overview');
@@ -14,6 +14,11 @@ export default function AdminDashboard() {
   const [editDiscount, setEditDiscount] = useState(0);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
+
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPrice, setNewPrice] = useState(0);
+  const [newDate, setNewDate] = useState('');
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
 
@@ -227,6 +232,14 @@ export default function AdminDashboard() {
         {/* PRODUCTS TAB */}
         {activeTab === 'products' && (
           <div className="animate-fade-in-up">
+            <div className="flex justify-end mb-6">
+              <button 
+                onClick={() => setIsAddingProduct(true)}
+                className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+              >
+                + Add Product
+              </button>
+            </div>
             <div className="p-[1px] rounded-3xl overflow-hidden bg-gradient-to-b from-white/10 to-transparent">
               <div className="bg-[#0a0f1c]/90 backdrop-blur-3xl rounded-3xl overflow-hidden shadow-2xl relative">
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
@@ -510,6 +523,109 @@ export default function AdminDashboard() {
                   >
                     <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-500 skew-x-12" />
                     Commit Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      {isAddingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 animate-fade-in-up">
+          <div className="absolute inset-0 bg-[#030712]/80 backdrop-blur-2xl" onClick={() => setIsAddingProduct(false)} />
+          
+          <div className="relative w-full max-w-lg p-[1px] rounded-[2rem] overflow-hidden bg-gradient-to-b from-cyan-400/50 to-blue-600/10 shadow-[0_0_100px_rgba(34,211,238,0.15)]">
+            <div className="bg-[#0a0f1c] rounded-[2rem] p-8 lg:p-10 relative overflow-hidden">
+              
+              <div className="relative z-10">
+                <div className="mb-8">
+                  <h3 className="text-3xl font-black text-white mb-1">Add New Product</h3>
+                  <p className="text-cyan-400 font-bold text-sm tracking-widest uppercase">Fill details below</p>
+                </div>
+                
+                <div className="space-y-6 mb-10">
+                  <div className="group">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Product Name</label>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-md opacity-0 group-focus-within:opacity-20 transition-opacity" />
+                      <div className="relative flex items-center bg-[#030712] border border-white/10 rounded-2xl overflow-hidden focus-within:border-cyan-400/50 transition-colors">
+                        <input 
+                          type="text" 
+                          value={newName} 
+                          onChange={e => setNewName(e.target.value)} 
+                          className="w-full px-4 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
+                          placeholder="Name..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Retail Price ($)</label>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-md opacity-0 group-focus-within:opacity-20 transition-opacity" />
+                      <div className="relative flex items-center bg-[#030712] border border-white/10 rounded-2xl overflow-hidden focus-within:border-cyan-400/50 transition-colors">
+                        <span className="pl-6 text-xl text-gray-500 font-black">$</span>
+                        <input 
+                          type="number" 
+                          step="0.01"
+                          value={newPrice} 
+                          onChange={e => setNewPrice(Number(e.target.value))} 
+                          className="w-full px-4 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="group">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Date</label>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-md opacity-0 group-focus-within:opacity-20 transition-opacity" />
+                      <div className="relative flex items-center bg-[#030712] border border-white/10 rounded-2xl overflow-hidden focus-within:border-cyan-400/50 transition-colors">
+                        <input 
+                          type="date" 
+                          value={newDate} 
+                          onChange={e => setNewDate(e.target.value)} 
+                          className="w-full px-4 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsAddingProduct(false)}
+                    className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-bold rounded-2xl hover:bg-white/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (newName && newPrice >= 0) {
+                        addProduct({
+                          name: newName,
+                          image: 'https://placehold.co/200x200?text=Product',
+                          rating: 0,
+                          reviews: 0,
+                          originalPrice: newPrice,
+                          salePrice: newPrice,
+                          discount: 0,
+                          colors: ['#fff'],
+                          inStock: true,
+                          date: newDate
+                        });
+                        setIsAddingProduct(false);
+                        setNewName('');
+                        setNewPrice(0);
+                        setNewDate('');
+                      }
+                    }}
+                    className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(34,211,238,0.4)] relative overflow-hidden group"
+                  >
+                    Add Product
                   </button>
                 </div>
               </div>
