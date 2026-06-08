@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   const chartData = [40, 70, 45, 90, 65, 85, 120, 60, 100, 80, 110, 95];
 
   return (
-    <div className="min-h-screen bg-[#030712] flex text-white font-sans selection:bg-cyan-500/30 overflow-hidden relative">
+    <div className="dark min-h-screen bg-[#030712] flex text-white font-sans selection:bg-cyan-500/30 overflow-hidden relative">
       {/* Deep Ambient Background */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-600/10 blur-[150px] animate-pulse" style={{ animationDuration: '8s' }} />
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
 
       {/* Cyber Sidebar */}
       <aside className="w-72 bg-white/[0.02] backdrop-blur-3xl border-r border-white/5 min-h-screen p-6 relative z-20 flex flex-col shadow-[10px_0_50px_rgba(0,0,0,0.5)]">
-        <div className="flex items-center gap-4 mb-14 px-2 mt-2">
+        <div className="flex items-center gap-4 mb-6 px-2 mt-2">
           <div className="relative">
             <div className="absolute inset-0 bg-cyan-400 blur-lg opacity-40 rounded-xl animate-pulse" />
             <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center border border-white/20 shadow-xl">
@@ -62,8 +62,18 @@ export default function AdminDashboard() {
             </div>
           </div>
           <h2 className="text-3xl font-black tracking-tighter text-white">
-            Admin<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">X</span>
+            Admin
           </h2>
+        </div>
+        
+        <div className="px-2 mb-10">
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm font-bold"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Back to Site
+          </button>
         </div>
 
         <nav className="space-y-4 flex-1">
