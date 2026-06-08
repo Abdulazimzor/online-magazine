@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useProductStore } from '../store/productStore';
 import { useOrderStore } from '../store/orderStore';
 import { type Product } from '../data/products';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminDashboard() {
   const { products, updateProductPrice, updateProductDiscount } = useProductStore();
@@ -11,6 +12,8 @@ export default function AdminDashboard() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editPrice, setEditPrice] = useState(0);
   const [editDiscount, setEditDiscount] = useState(0);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
 
@@ -68,7 +71,7 @@ export default function AdminDashboard() {
             return (
               <button 
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)} 
+                onClick={() => setActiveTab(tab.id as 'overview' | 'products' | 'orders')} 
                 className={`relative w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold transition-all duration-500 group overflow-hidden ${
                   isActive ? 'text-white' : 'text-gray-500 hover:text-white hover:bg-white/[0.03]'
                 }`}
@@ -319,38 +322,109 @@ export default function AdminDashboard() {
                           <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Timestamp</th>
                           <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Value</th>
                           <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
+                          <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Items</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {orders.map(o => (
-                          <tr key={o.id} className="hover:bg-white/[0.03] transition-colors">
-                            <td className="px-8 py-6">
-                              <span className="font-mono text-sm font-bold text-cyan-400 bg-cyan-400/10 px-3 py-1.5 rounded-lg border border-cyan-400/20">{o.id}</span>
-                            </td>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg">
-                                  {o.customerDetails.name.charAt(0)}
+                          <React.Fragment key={o.id}>
+                            <tr 
+                              className={`hover:bg-white/[0.04] transition-colors cursor-pointer ${expandedOrderId === o.id ? 'bg-white/[0.03]' : ''}`}
+                              onClick={() => setExpandedOrderId(expandedOrderId === o.id ? null : o.id)}
+                            >
+                              <td className="px-8 py-6">
+                                <span className="font-mono text-sm font-bold text-cyan-400 bg-cyan-400/10 px-3 py-1.5 rounded-lg border border-cyan-400/20 flex items-center gap-2 w-max">
+                                  {o.id}
+                                </span>
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-white shadow-lg">
+                                    {o.customerDetails.name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-white text-base">{o.customerDetails.name}</p>
+                                    <p className="text-xs text-gray-400 font-medium">{o.customerDetails.email}</p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-bold text-white text-base">{o.customerDetails.name}</p>
-                                  <p className="text-xs text-gray-400 font-medium">{o.customerDetails.email}</p>
+                              </td>
+                              <td className="px-8 py-6 text-sm font-bold text-gray-400">
+                                {new Date(o.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td className="px-8 py-6">
+                                <span className="text-xl font-black text-white">${o.totalAmount.toFixed(2)}</span>
+                              </td>
+                              <td className="px-8 py-6">
+                                <span className={`inline-flex items-center gap-2 px-4 py-1.5 border rounded-xl text-xs font-black tracking-wider uppercase ${
+                                  o.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
+                                  o.status === 'Delivered' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                  o.status === 'Processing' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                  'bg-red-500/10 text-red-400 border-red-500/20'
+                                }`}>
+                                  <span className={`w-2 h-2 rounded-full animate-pulse ${
+                                    o.status === 'Pending' ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.8)]' : 
+                                    o.status === 'Delivered' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]' :
+                                    o.status === 'Processing' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]' :
+                                    'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'
+                                  }`} />
+                                  {o.status}
+                                </span>
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex items-center gap-2 text-cyan-400 font-semibold group-hover:text-cyan-300 transition-colors">
+                                  <span>{o.items.length} item{o.items.length !== 1 ? 's' : ''}</span>
+                                  <motion.svg 
+                                    animate={{ rotate: expandedOrderId === o.id ? 180 : 0 }} 
+                                    className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </motion.svg>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-8 py-6 text-sm font-bold text-gray-400">
-                              {new Date(o.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                            </td>
-                            <td className="px-8 py-6">
-                              <span className="text-xl font-black text-white">${o.totalAmount.toFixed(2)}</span>
-                            </td>
-                            <td className="px-8 py-6">
-                              <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-xl text-xs font-black tracking-wider uppercase">
-                                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.8)]" />
-                                {o.status}
-                              </span>
-                            </td>
-                          </tr>
+                              </td>
+                            </tr>
+                            <AnimatePresence>
+                              {expandedOrderId === o.id && (
+                                <motion.tr 
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="bg-white/[0.01]"
+                                >
+                                  <td colSpan={6} className="px-8 py-0">
+                                    <div className="py-6 border-t border-white/5">
+                                      <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Purchased Products</h4>
+                                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                        {o.items.map((item, idx) => (
+                                          <div key={idx} className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-500/30 transition-colors group">
+                                            <div className="w-16 h-16 rounded-xl bg-white/5 p-2 flex items-center justify-center flex-shrink-0 group-hover:shadow-[0_0_15px_rgba(34,211,238,0.2)] transition-shadow">
+                                              <img src={item.product.image} alt={item.product.name} className="w-full h-full object-contain" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                              <p className="font-bold text-white text-sm line-clamp-1 mb-1" title={item.product.name}>{item.product.name}</p>
+                                              <div className="flex items-center justify-between mt-2">
+                                                <span className="text-xs font-bold text-cyan-400 bg-cyan-400/10 px-2 py-1 rounded">Qty: {item.quantity}</span>
+                                                <span className="text-sm font-black text-white">${(item.product.salePrice * item.quantity).toFixed(2)}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <div className="mt-6 flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+                                        <div>
+                                          <p className="text-sm font-bold text-gray-400">Shipping Address</p>
+                                          <p className="text-white mt-1 font-medium">{o.customerDetails.address}</p>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-sm font-bold text-gray-400">Order Total</p>
+                                          <p className="text-2xl font-black text-white">${o.totalAmount.toFixed(2)}</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              )}
+                            </AnimatePresence>
+                          </React.Fragment>
                         ))}
                       </tbody>
                     </table>

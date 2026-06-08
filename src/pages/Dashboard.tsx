@@ -2,12 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useOrderStore } from '../store/orderStore';
 
 export default function Dashboard() {
   const { isAuthenticated, logout } = useAuth();
+  const { orders } = useOrderStore();
   const [activeView, setActiveView] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<string>('All');
   const navigate = useNavigate();
+
+  // Mock current user email to filter their orders (In a real app, this comes from auth)
+  const currentUserEmail = 'roan@example.com';
+  const myOrders = orders.filter(o => o.customerDetails.email === currentUserEmail || true); // Showing all for demo purposes
+  
+  const filteredOrders = myOrders.filter(o => orderFilter === 'All' || o.status === orderFilter);
+
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -200,14 +209,65 @@ export default function Dashboard() {
                  </select>
                </div>
                
-               <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100">
-                 <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
-                 <h4 className="text-lg font-semibold text-gray-700">No {orderFilter !== 'All' ? orderFilter.toLowerCase() : ''} orders found</h4>
-                 <p className="text-gray-500 mt-2 max-w-md mx-auto">Looks like you don't have any orders matching this category yet.</p>
-                 <button onClick={() => navigate('/shop')} className="mt-6 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition">
-                   Start Shopping
-                 </button>
-               </div>
+               {filteredOrders.length === 0 ? (
+                 <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-100">
+                   <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+                   <h4 className="text-lg font-semibold text-gray-700">No {orderFilter !== 'All' ? orderFilter.toLowerCase() : ''} orders found</h4>
+                   <p className="text-gray-500 mt-2 max-w-md mx-auto">Looks like you don't have any orders matching this category yet.</p>
+                   <button onClick={() => navigate('/shop')} className="mt-6 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition">
+                     Start Shopping
+                   </button>
+                 </div>
+               ) : (
+                 <div className="space-y-6">
+                   {filteredOrders.map(order => (
+                     <div key={order.id} className="bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+                       <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
+                         <div>
+                           <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">Order #{order.id}</p>
+                           <p className="text-gray-700 font-medium">Placed on {new Date(order.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                         </div>
+                         <div className="flex flex-col items-end gap-2">
+                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-bold ${
+                             order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                             order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
+                             order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                             'bg-red-100 text-red-700'
+                           }`}>
+                             <span className={`w-2 h-2 rounded-full ${
+                               order.status === 'Pending' ? 'bg-yellow-500' :
+                               order.status === 'Processing' ? 'bg-blue-500' :
+                               order.status === 'Delivered' ? 'bg-green-500' :
+                               'bg-red-500'
+                             }`} />
+                             {order.status}
+                           </span>
+                           <span className="text-lg font-black text-gray-900">${order.totalAmount.toFixed(2)}</span>
+                         </div>
+                       </div>
+                       
+                       <div className="p-6">
+                         <div className="space-y-4">
+                           {order.items.map((item, idx) => (
+                             <div key={idx} className="flex gap-4">
+                               <div className="w-20 h-20 bg-gray-50 rounded-2xl p-2 border border-gray-100 flex-shrink-0 flex items-center justify-center">
+                                 <img src={item.product.image} alt={item.product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                               </div>
+                               <div className="flex-1 flex flex-col justify-center">
+                                 <h4 className="font-bold text-gray-800 line-clamp-1">{item.product.name}</h4>
+                                 <div className="flex items-center gap-4 mt-2">
+                                   <span className="text-gray-500 text-sm font-medium">Qty: {item.quantity}</span>
+                                   <span className="text-gray-900 font-bold">${(item.product.salePrice * item.quantity).toFixed(2)}</span>
+                                 </div>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               )}
             </motion.div>
           )}
         </AnimatePresence>

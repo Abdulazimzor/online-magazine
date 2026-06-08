@@ -2,20 +2,6 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Product {
-  id: number;
-  name: string;
-  image: string;
-  rating: number;
-  reviews: number;
-  originalPrice: number;
-  salePrice: number;
-  discount: number;
-  badge?: string;
-  colors: string[];
-  inStock: boolean;
-  category: string;
-}
 
 import { useProductStore } from '../store/productStore';
 
