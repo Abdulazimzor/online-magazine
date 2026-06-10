@@ -5,15 +5,17 @@ import { useAuth } from '../context/AuthContext';
 import { useOrderStore } from '../store/orderStore';
 
 export default function Dashboard() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const { orders } = useOrderStore();
   const [activeView, setActiveView] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<string>('All');
   const navigate = useNavigate();
 
-  // Mock current user email to filter their orders (In a real app, this comes from auth)
-  const currentUserEmail = 'roan@example.com';
-  const myOrders = orders.filter(o => o.customerDetails.email === currentUserEmail || true); // Showing all for demo purposes
+  // Real user data from Supabase
+  const userFullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Foydalanuvchi';
+  const userEmail = user?.email || '';
+  const userAvatarUrl = user?.user_metadata?.avatar_url || null;
+  const myOrders = orders.filter(o => o.customerDetails.email === userEmail || true); // Showing all for demo purposes
   
   const filteredOrders = myOrders.filter(o => orderFilter === 'All' || o.status === orderFilter);
 
@@ -53,22 +55,23 @@ export default function Dashboard() {
 
           <div className="relative z-10 flex flex-col items-center mt-6">
             <div className="relative">
-              <img 
-                src="https://randomuser.me/api/portraits/men/32.jpg" 
-                alt="Roan Atkinson" 
-                className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md relative z-10"
-              />
-              <button className="absolute bottom-1 right-1 z-20 bg-white p-2 rounded-full shadow-md text-gray-500 border border-gray-100 hover:text-rose-600 transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12a9 9 0 1018 0 9 9 0 00-18 0zM12 8v4m0 4h.01" /> 
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-                </svg>
-              </button>
+              {userAvatarUrl ? (
+                <img
+                  src={userAvatarUrl}
+                  alt={userFullName}
+                  className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-white shadow-md relative z-10"
+                />
+              ) : (
+                <div className="w-28 h-28 md:w-32 md:h-32 rounded-full border-4 border-white shadow-md relative z-10 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-white font-black text-4xl">
+                    {userFullName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
             </div>
             
-            <h2 className="mt-5 text-2xl font-bold text-gray-800">Roan Atkinson</h2>
-            <p className="text-gray-500 font-medium mt-1">Entrepreneur</p>
+            <h2 className="mt-5 text-2xl font-bold text-gray-800">{userFullName}</h2>
+            <p className="text-gray-500 font-medium mt-1">{userEmail}</p>
           </div>
 
           {/* Decorative Waves */}
@@ -157,17 +160,17 @@ export default function Dashboard() {
 
           {activeView === 'edit' && (
             <motion.div key="edit-profile" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-50">
-               <h3 className="text-xl font-bold mb-6">Profile Information</h3>
+               <h3 className="text-xl font-bold mb-6">Profil ma'lumotlari</h3>
                <div className="space-y-4 max-w-lg">
                  <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                   <input type="text" defaultValue="Roan Atkinson" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                   <label className="block text-sm font-medium text-gray-700 mb-1">To'liq ism</label>
+                   <input type="text" defaultValue={userFullName} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
                  </div>
                  <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                   <input type="email" defaultValue="roan@example.com" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Email manzil</label>
+                   <input type="email" defaultValue={userEmail} readOnly className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl focus:outline-none text-gray-500 cursor-not-allowed" />
                  </div>
-                 <button onClick={() => setActiveView(null)} className="mt-4 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition">Save Changes</button>
+                 <button onClick={() => setActiveView(null)} className="mt-4 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition">Saqlash</button>
                </div>
             </motion.div>
           )}
