@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProductStore } from '../store/productStore';
 import { useOrderStore } from '../store/orderStore';
 import { type Product } from '../data/products';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminDashboard() {
-  const { products, updateProductPrice, updateProductDiscount, addProduct } = useProductStore();
+  const { products, isLoading, isSyncing, error, fetchProducts, updateProductPrice, updateProductDiscount, addProduct, deleteProduct } = useProductStore();
   const { orders } = useOrderStore();
   
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders'>('overview');
@@ -14,11 +14,20 @@ export default function AdminDashboard() {
   const [editDiscount, setEditDiscount] = useState(0);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
-
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState(0);
   const [newDate, setNewDate] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+
+  // Fetch products from Supabase on mount
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
 
@@ -26,13 +35,68 @@ export default function AdminDashboard() {
     setEditingProduct(product);
     setEditPrice(product.salePrice);
     setEditDiscount(product.discount || 0);
+    setSaveStatus('idle');
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingProduct) {
-      updateProductDiscount(editingProduct.id, editDiscount);
-      updateProductPrice(editingProduct.id, editPrice);
-      setEditingProduct(null);
+      setSaveStatus('saving');
+      try {
+        await updateProductDiscount(editingProduct.id, editDiscount);
+        await updateProductPrice(editingProduct.id, editPrice);
+        setSaveStatus('success');
+        setTimeout(() => {
+          setEditingProduct(null);
+          setSaveStatus('idle');
+        }, 800);
+      } catch {
+        setSaveStatus('error');
+      }
+    }
+  };
+
+  const handleAddProduct = async () => {
+    if (newName && newPrice >= 0) {
+      setSaveStatus('saving');
+      try {
+        await addProduct({
+          name: newName,
+          image: 'https://placehold.co/200x200?text=Product',
+          rating: 0,
+          reviews: 0,
+          originalPrice: newPrice,
+          salePrice: newPrice,
+          discount: 0,
+          colors: ['#fff'],
+          inStock: true,
+          date: newDate,
+          category: newCategory,
+          description: newDescription,
+        });
+        setSaveStatus('success');
+        setTimeout(() => {
+          setIsAddingProduct(false);
+          setNewName('');
+          setNewPrice(0);
+          setNewDate('');
+          setNewCategory('');
+          setNewDescription('');
+          setSaveStatus('idle');
+        }, 800);
+      } catch {
+        setSaveStatus('error');
+      }
+    }
+  };
+
+  const handleDeleteProduct = async (id: number) => {
+    setSaveStatus('saving');
+    try {
+      await deleteProduct(id);
+      setDeleteConfirm(null);
+      setSaveStatus('idle');
+    } catch {
+      setSaveStatus('error');
     }
   };
 
@@ -49,6 +113,21 @@ export default function AdminDashboard() {
         {/* Subtle grid pattern overlay */}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDIpIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiPjxwYXRoIGQ9Ik0wIDQwaDQwVjBIMHoiLz48L2c+PC9zdmc+')] opacity-40 z-0" />
       </div>
+
+      {/* Syncing Indicator */}
+      <AnimatePresence>
+        {isSyncing && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 right-4 z-[100] flex items-center gap-3 px-5 py-3 bg-cyan-500/20 border border-cyan-500/30 backdrop-blur-xl rounded-2xl shadow-[0_0_30px_rgba(34,211,238,0.2)]"
+          >
+            <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-cyan-400 font-bold text-sm">Syncing with Supabase...</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Cyber Sidebar */}
       <aside className="w-72 bg-white/[0.02] backdrop-blur-3xl border-r border-white/5 min-h-screen p-6 relative z-20 flex flex-col shadow-[10px_0_50px_rgba(0,0,0,0.5)]">
@@ -105,6 +184,18 @@ export default function AdminDashboard() {
             );
           })}
         </nav>
+
+        {/* Supabase Connection Status */}
+        <div className="px-2 mb-6">
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold ${
+            error 
+              ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${error ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`} />
+            {error ? 'Offline Mode' : 'Supabase Connected'}
+          </div>
+        </div>
 
         {/* User Profile Area */}
         <div className="mt-auto border-t border-white/10 pt-6">
@@ -244,81 +335,130 @@ export default function AdminDashboard() {
           <div className="animate-fade-in-up">
             <div className="flex justify-end mb-6">
               <button 
-                onClick={() => setIsAddingProduct(true)}
+                onClick={() => { setIsAddingProduct(true); setSaveStatus('idle'); }}
                 className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_15px_rgba(34,211,238,0.4)]"
               >
                 + Add Product
               </button>
             </div>
-            <div className="p-[1px] rounded-3xl overflow-hidden bg-gradient-to-b from-white/10 to-transparent">
-              <div className="bg-[#0a0f1c]/90 backdrop-blur-3xl rounded-3xl overflow-hidden shadow-2xl relative">
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-white/[0.02] border-b border-white/10">
-                        <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Product Detail</th>
-                        <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Price</th>
-                        <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Promo</th>
-                        <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Stock</th>
-                        <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em] text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {products.map(p => (
-                        <tr key={p.id} className="hover:bg-white/[0.03] transition-colors group">
-                          <td className="px-8 py-5 flex items-center gap-5">
-                            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center p-2 border border-white/10 group-hover:border-cyan-500/50 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all">
-                              <img src={p.image} className="w-full h-full object-contain" alt={p.name} />
-                            </div>
-                            <div>
-                              <span className="font-bold text-white block text-lg mb-1">{p.name}</span>
-                              <span className="text-xs font-bold text-cyan-500 uppercase tracking-widest bg-cyan-500/10 px-2 py-0.5 rounded">{p.category}</span>
-                            </div>
-                          </td>
-                          <td className="px-8 py-5">
-                            <div className="flex flex-col">
-                              <span className="text-xl font-black text-white">${p.salePrice.toFixed(2)}</span>
-                              {p.discount > 0 && <span className="text-xs text-gray-500 line-through font-bold">${p.originalPrice.toFixed(2)}</span>}
-                            </div>
-                          </td>
-                          <td className="px-8 py-5">
-                            {p.discount > 0 ? (
-                              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_5px_rgba(239,68,68,0.8)]" />
-                                <span className="text-red-400 text-xs font-black">{p.discount}% OFF</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-600 font-bold">-</span>
-                            )}
-                          </td>
-                          <td className="px-8 py-5">
-                            {p.inStock ? (
-                              <span className="inline-flex items-center gap-2 text-green-400 text-sm font-bold">
-                                <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" /> In Stock
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-2 text-gray-500 text-sm font-bold">
-                                <span className="w-2 h-2 rounded-full bg-gray-600" /> Out of Stock
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-8 py-5 text-right">
-                            <button 
-                              onClick={() => handleEditClick(p)}
-                              className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white hover:bg-cyan-500 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all"
-                            >
-                              Edit Item
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+
+            {/* Loading State */}
+            {isLoading ? (
+              <div className="p-[1px] rounded-3xl overflow-hidden bg-gradient-to-b from-white/10 to-transparent">
+                <div className="bg-[#0a0f1c]/90 backdrop-blur-3xl rounded-3xl p-16 flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mb-6" />
+                  <h3 className="text-xl font-black text-white mb-2">Loading Products</h3>
+                  <p className="text-gray-400 font-medium">Fetching from Supabase...</p>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-[1px] rounded-3xl overflow-hidden bg-gradient-to-b from-white/10 to-transparent">
+                <div className="bg-[#0a0f1c]/90 backdrop-blur-3xl rounded-3xl overflow-hidden shadow-2xl relative">
+                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+                  
+                  {/* Error Banner */}
+                  {error && (
+                    <div className="mx-6 mt-4 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-3">
+                      <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <span className="text-amber-400 text-sm font-bold">Offline mode — showing cached data. Supabase: {error}</span>
+                    </div>
+                  )}
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-white/[0.02] border-b border-white/10">
+                          <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Product Detail</th>
+                          <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Price</th>
+                          <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Promo</th>
+                          <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Stock</th>
+                          <th className="px-8 py-6 text-xs font-black text-gray-400 uppercase tracking-[0.2em] text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {products.map(p => (
+                          <tr key={p.id} className="hover:bg-white/[0.03] transition-colors group">
+                            <td className="px-8 py-5 flex items-center gap-5">
+                              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center p-2 border border-white/10 group-hover:border-cyan-500/50 group-hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all">
+                                <img src={p.image} className="w-full h-full object-contain" alt={p.name} />
+                              </div>
+                              <div>
+                                <span className="font-bold text-white block text-lg mb-1">{p.name}</span>
+                                {p.category && <span className="text-xs font-bold text-cyan-500 uppercase tracking-widest bg-cyan-500/10 px-2 py-0.5 rounded">{p.category}</span>}
+                              </div>
+                            </td>
+                            <td className="px-8 py-5">
+                              <div className="flex flex-col">
+                                <span className="text-xl font-black text-white">${p.salePrice.toFixed(2)}</span>
+                                {p.discount > 0 && <span className="text-xs text-gray-500 line-through font-bold">${p.originalPrice.toFixed(2)}</span>}
+                              </div>
+                            </td>
+                            <td className="px-8 py-5">
+                              {p.discount > 0 ? (
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+                                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_5px_rgba(239,68,68,0.8)]" />
+                                  <span className="text-red-400 text-xs font-black">{p.discount}% OFF</span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-600 font-bold">-</span>
+                              )}
+                            </td>
+                            <td className="px-8 py-5">
+                              {p.inStock ? (
+                                <span className="inline-flex items-center gap-2 text-green-400 text-sm font-bold">
+                                  <span className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]" /> In Stock
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-2 text-gray-500 text-sm font-bold">
+                                  <span className="w-2 h-2 rounded-full bg-gray-600" /> Out of Stock
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button 
+                                  onClick={() => handleEditClick(p)}
+                                  className="px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-white hover:bg-cyan-500 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] transition-all"
+                                >
+                                  Edit
+                                </button>
+                                {deleteConfirm === p.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <button 
+                                      onClick={() => handleDeleteProduct(p.id)}
+                                      className="px-3 py-2.5 bg-red-500/20 border border-red-500/40 rounded-xl text-sm font-bold text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                                    >
+                                      Confirm
+                                    </button>
+                                    <button 
+                                      onClick={() => setDeleteConfirm(null)}
+                                      className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-gray-400 hover:text-white transition-all"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button 
+                                    onClick={() => setDeleteConfirm(p.id)}
+                                    className="px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-bold text-gray-400 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400 transition-all"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -524,15 +664,34 @@ export default function AdminDashboard() {
                   <button 
                     onClick={() => setEditingProduct(null)}
                     className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-bold rounded-2xl hover:bg-white/10 transition-colors"
+                    disabled={saveStatus === 'saving'}
                   >
                     Discard
                   </button>
                   <button 
                     onClick={handleSaveEdit}
-                    className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(34,211,238,0.4)] relative overflow-hidden group"
+                    disabled={saveStatus === 'saving'}
+                    className={`flex-1 py-4 text-white font-black rounded-2xl transition-all relative overflow-hidden group ${
+                      saveStatus === 'success' 
+                        ? 'bg-gradient-to-r from-emerald-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.4)]' 
+                        : saveStatus === 'error'
+                        ? 'bg-gradient-to-r from-red-500 to-red-600'
+                        : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-[1.02] shadow-[0_0_20px_rgba(34,211,238,0.4)]'
+                    }`}
                   >
                     <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-500 skew-x-12" />
-                    Commit Changes
+                    {saveStatus === 'saving' ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </div>
+                    ) : saveStatus === 'success' ? (
+                      '✓ Saved!'
+                    ) : saveStatus === 'error' ? (
+                      '✕ Error — Retry'
+                    ) : (
+                      'Commit Changes'
+                    )}
                   </button>
                 </div>
               </div>
@@ -547,12 +706,12 @@ export default function AdminDashboard() {
           <div className="absolute inset-0 bg-[#030712]/80 backdrop-blur-2xl" onClick={() => setIsAddingProduct(false)} />
           
           <div className="relative w-full max-w-lg p-[1px] rounded-[2rem] overflow-hidden bg-gradient-to-b from-cyan-400/50 to-blue-600/10 shadow-[0_0_100px_rgba(34,211,238,0.15)]">
-            <div className="bg-[#0a0f1c] rounded-[2rem] p-8 lg:p-10 relative overflow-hidden">
+            <div className="bg-[#0a0f1c] rounded-[2rem] p-8 lg:p-10 relative overflow-hidden max-h-[90vh] overflow-y-auto">
               
               <div className="relative z-10">
                 <div className="mb-8">
                   <h3 className="text-3xl font-black text-white mb-1">Add New Product</h3>
-                  <p className="text-cyan-400 font-bold text-sm tracking-widest uppercase">Fill details below</p>
+                  <p className="text-cyan-400 font-bold text-sm tracking-widest uppercase">Saved directly to Supabase</p>
                 </div>
                 
                 <div className="space-y-6 mb-10">
@@ -565,8 +724,24 @@ export default function AdminDashboard() {
                           type="text" 
                           value={newName} 
                           onChange={e => setNewName(e.target.value)} 
-                          className="w-full px-4 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
+                          className="w-full px-6 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
                           placeholder="Name..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Category</label>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl blur-md opacity-0 group-focus-within:opacity-20 transition-opacity" />
+                      <div className="relative flex items-center bg-[#030712] border border-white/10 rounded-2xl overflow-hidden focus-within:border-purple-400/50 transition-colors">
+                        <input 
+                          type="text" 
+                          value={newCategory} 
+                          onChange={e => setNewCategory(e.target.value)} 
+                          className="w-full px-6 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
+                          placeholder="e.g. Electronics, Wheels..."
                         />
                       </div>
                     </div>
@@ -588,6 +763,22 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="group">
+                    <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Description</label>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-md opacity-0 group-focus-within:opacity-20 transition-opacity" />
+                      <div className="relative bg-[#030712] border border-white/10 rounded-2xl overflow-hidden focus-within:border-cyan-400/50 transition-colors">
+                        <textarea 
+                          value={newDescription} 
+                          onChange={e => setNewDescription(e.target.value)} 
+                          rows={3}
+                          className="w-full px-6 py-4 bg-transparent text-white font-bold text-base focus:outline-none placeholder-gray-700 resize-none" 
+                          placeholder="Product description..."
+                        />
+                      </div>
+                    </div>
+                  </div>
                   
                   <div className="group">
                     <label className="block text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Date</label>
@@ -598,7 +789,7 @@ export default function AdminDashboard() {
                           type="date" 
                           value={newDate} 
                           onChange={e => setNewDate(e.target.value)} 
-                          className="w-full px-4 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
+                          className="w-full px-6 py-4 bg-transparent text-white font-black text-xl focus:outline-none placeholder-gray-700" 
                         />
                       </div>
                     </div>
@@ -609,33 +800,36 @@ export default function AdminDashboard() {
                   <button 
                     onClick={() => setIsAddingProduct(false)}
                     className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-bold rounded-2xl hover:bg-white/10 transition-colors"
+                    disabled={saveStatus === 'saving'}
                   >
                     Cancel
                   </button>
                   <button 
-                    onClick={() => {
-                      if (newName && newPrice >= 0) {
-                        addProduct({
-                          name: newName,
-                          image: 'https://placehold.co/200x200?text=Product',
-                          rating: 0,
-                          reviews: 0,
-                          originalPrice: newPrice,
-                          salePrice: newPrice,
-                          discount: 0,
-                          colors: ['#fff'],
-                          inStock: true,
-                          date: newDate
-                        });
-                        setIsAddingProduct(false);
-                        setNewName('');
-                        setNewPrice(0);
-                        setNewDate('');
-                      }
-                    }}
-                    className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-black rounded-2xl hover:scale-[1.02] transition-transform shadow-[0_0_20px_rgba(34,211,238,0.4)] relative overflow-hidden group"
+                    onClick={handleAddProduct}
+                    disabled={saveStatus === 'saving' || !newName}
+                    className={`flex-1 py-4 text-white font-black rounded-2xl transition-all relative overflow-hidden group ${
+                      saveStatus === 'success' 
+                        ? 'bg-gradient-to-r from-emerald-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.4)]' 
+                        : saveStatus === 'error'
+                        ? 'bg-gradient-to-r from-red-500 to-red-600'
+                        : !newName
+                        ? 'bg-gray-700 cursor-not-allowed opacity-50'
+                        : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:scale-[1.02] shadow-[0_0_20px_rgba(34,211,238,0.4)]'
+                    }`}
                   >
-                    Add Product
+                    <div className="absolute inset-0 bg-white/20 -translate-x-full group-hover:translate-x-full transition-transform duration-500 skew-x-12" />
+                    {saveStatus === 'saving' ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </div>
+                    ) : saveStatus === 'success' ? (
+                      '✓ Added!'
+                    ) : saveStatus === 'error' ? (
+                      '✕ Error — Retry'
+                    ) : (
+                      'Add Product'
+                    )}
                   </button>
                 </div>
               </div>
@@ -643,6 +837,20 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Delete Overlay Indicator */}
+      <AnimatePresence>
+        {deleteConfirm !== null && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 bg-red-500/20 border border-red-500/30 backdrop-blur-xl rounded-2xl shadow-[0_0_30px_rgba(239,68,68,0.2)]"
+          >
+            <span className="text-red-400 font-bold text-sm">⚠ Click "Confirm" to permanently delete product from Supabase</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, NavLink, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './components/ThemeProvider';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useCartStore } from './store/cartStore';
+import { useProductStore } from './store/productStore';
 
 const queryClient = new QueryClient();
 
@@ -194,6 +195,11 @@ function Footer() {
 function Layout() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const fetchProducts = useProductStore((state) => state.fetchProducts);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   return (
     <div className="flex flex-col min-h-screen">

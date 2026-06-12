@@ -12,8 +12,10 @@ export interface Product {
   inStock: boolean;
   description?: string;
   date?: string;
+  category?: string;
 }
 
+// Fallback data — used only when Supabase is empty or unreachable
 export const PRODUCTS: Product[] = [
   {
     id: 1,
@@ -26,6 +28,7 @@ export const PRODUCTS: Product[] = [
     discount: 18,
     colors: ['#e5e7eb', '#B8860B', '#1a1a1a'],
     inStock: true,
+    category: 'Wheels',
     description: 'The VISION 147 DAYTONA is a premium hyper silver wheel that combines aggressive styling with exceptional durability. Engineered for high performance and perfect fitment on a variety of vehicles.',
   },
   {
@@ -39,6 +42,7 @@ export const PRODUCTS: Product[] = [
     discount: 8,
     colors: ['#1f2937', '#374151'],
     inStock: true,
+    category: 'Electronics',
     description: 'Equipped with a 1080p Sony Exmor CMOS sensor, the Thinkware F770 delivers crisp and detailed footage. Features built-in Wi-Fi, Super Night Vision, and Time Lapse recording for maximum security.',
   },
   {
@@ -53,6 +57,7 @@ export const PRODUCTS: Product[] = [
     badge: 'SUPER PRICE',
     colors: ['#1f2937'],
     inStock: true,
+    category: 'Security',
     description: 'A 2-in-1 solution offering a loud 110dB car alarm and dual USB charging ports. Plugs directly into your 12V socket, providing peace of mind and keeping your devices powered.',
   },
   {
@@ -66,6 +71,7 @@ export const PRODUCTS: Product[] = [
     discount: 11,
     colors: ['#9ca3af', '#d1d5db'],
     inStock: true,
+    category: 'Lighting',
     description: 'Upgrade your vehicle\'s lighting with these premium projector headlights from Spyder. Featuring advanced optics for improved visibility and a sleek, modern look that transforms your front end.',
   },
   {
@@ -79,6 +85,7 @@ export const PRODUCTS: Product[] = [
     discount: 24,
     colors: ['#6b7280', '#1f2937'],
     inStock: true,
+    category: 'Lighting',
     description: 'High-quality aftermarket projector headlights by Spec-D Tuning. Designed for easy plug-and-play installation, providing a brighter, more focused beam pattern for safer night driving.',
   },
   {
@@ -93,6 +100,7 @@ export const PRODUCTS: Product[] = [
     badge: 'TOP PRODUCT',
     colors: ['#f59e0b'],
     inStock: true,
+    category: 'Adapters',
     description: 'Heavy-duty dogbone electrical adapter for RVs. Converts a standard 15A household receptacle to a 50A RV connection. Made with 100% copper wiring and a durable PVC jacket.',
   },
   {
@@ -106,6 +114,7 @@ export const PRODUCTS: Product[] = [
     discount: 29,
     colors: ['#dc2626', '#fbbf24'],
     inStock: true,
+    category: 'Oils & Fluids',
     description: 'Premium heavy-duty engine oil designed to provide excellent protection and performance for diesel engines. Formulated with advanced additives to reduce wear and maintain engine cleanliness.',
   },
   {
@@ -119,6 +128,7 @@ export const PRODUCTS: Product[] = [
     discount: 34,
     colors: ['#9ca3af'],
     inStock: true,
+    category: 'Accessories',
     description: 'Keep cool on the road with this 12V oscillating chrome fan. Plugs directly into your cigarette lighter and features a durable metal cage and adjustable mounting options.',
   },
 ];
