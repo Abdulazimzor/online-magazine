@@ -11,9 +11,11 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import Wishlist from './pages/Wishlist';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useCartStore } from './store/cartStore';
 import { useProductStore } from './store/productStore';
+import { useWishlistStore } from './store/wishlistStore';
 
 const queryClient = new QueryClient();
 
@@ -21,6 +23,7 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const cartCount = useCartStore((state) => state.getCartCount());
+  const wishlistCount = useWishlistStore((state) => state.items.length);
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100 shadow-sm">
@@ -93,6 +96,17 @@ function Navbar() {
             </Link>
           )}
 
+          <Link to="/wishlist" className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            {wishlistCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+
           <Link to="/cart" className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -126,6 +140,7 @@ function Navbar() {
             { to: '/', label: '🏠 Home' },
             { to: '/shop', label: '🛒 Shop' },
             { to: '/admin', label: '⚙️ Admin' },
+            { to: '/wishlist', label: '❤️ Wishlist' },
             { to: '/cart', label: '🛍️ Cart' },
             ...(isAuthenticated
               ? [
@@ -210,6 +225,7 @@ function Layout() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

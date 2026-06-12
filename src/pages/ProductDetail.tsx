@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 import { useProductStore } from '../store/productStore';
+import { useCartStore } from '../store/cartStore';
+import { useWishlistStore } from '../store/wishlistStore';
 
 function StarRating({ rating, reviews }: { rating: number, reviews?: number }) {
   return (
@@ -31,6 +33,9 @@ export default function ProductDetail() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
   const products = useProductStore((state) => state.products);
+  const addToCart = useCartStore((state) => state.addToCart);
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const isInWishlistFn = useWishlistStore((state) => state.isInWishlist);
   const product = products.find((p) => p.id === Number(id));
 
   if (!product) {
@@ -42,10 +47,11 @@ export default function ProductDetail() {
     );
   }
 
-  // Set default color if not selected
   if (!selectedColor && product.colors.length > 0) {
     setSelectedColor(product.colors[0]);
   }
+
+  const isInWishlist = isInWishlistFn(product.id);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -157,16 +163,24 @@ export default function ProductDetail() {
                 >+</button>
               </div>
 
-              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-blue-600/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
+              <button 
+                onClick={() => addToCart(product, quantity)}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-blue-600/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+              >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
                 Add to Cart
               </button>
               
-              <button className="w-14 h-14 flex items-center justify-center rounded-xl border-2 border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-500 hover:bg-red-50 transition-all flex-shrink-0">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              <button 
+                onClick={() => toggleWishlist(product)}
+                className={`w-14 h-14 flex items-center justify-center rounded-xl border-2 transition-all flex-shrink-0 ${
+                  isInWishlist ? 'border-red-500 bg-red-50 text-red-500' : 'border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-500 hover:bg-red-50'
+                }`}
+              >
+                <svg className="w-6 h-6" fill={isInWishlist ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
               </button>
             </div>
@@ -183,7 +197,7 @@ export default function ProductDetail() {
               </div>
               <div className="flex text-sm">
                 <span className="w-32 font-bold text-gray-900">Tags:</span>
-                <span className="text-gray-500">Premium, {product.category.split(' ')[0]}, Quality</span>
+                <span className="text-gray-500">Premium, {product.category?.split(' ')[0] || 'Auto'}, Quality</span>
               </div>
             </div>
 

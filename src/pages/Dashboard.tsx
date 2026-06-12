@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useOrderStore } from '../store/orderStore';
+import { supabase } from '../lib/supabase';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 
 export default function Dashboard() {
   const { isAuthenticated, logout, user } = useAuth();
@@ -11,20 +15,266 @@ export default function Dashboard() {
   const [orderFilter, setOrderFilter] = useState<string>('All');
   const navigate = useNavigate();
 
-  // Real user data from Supabase
-  const userFullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Foydalanuvchi';
+  // Profile edit state
+  const [profileForm, setProfileForm] = useState({
+    full_name: '',
+    username: '',
+    phone: '',
+    bio: '',
+    location: '',
+    website: '',
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Address state
+  interface Address {
+    id: string;
+    title: string;
+    full_name: string;
+    phone: string;
+    city: string;
+    district: string;
+    street: string;
+    zip_code: string;
+    country: string;
+    is_default: boolean;
+  }
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [addrLoading, setAddrLoading] = useState(false);
+  const [showAddrForm, setShowAddrForm] = useState(false);
+  const [editingAddr, setEditingAddr] = useState<Address | null>(null);
+  const [addrForm, setAddrForm] = useState({
+    title: 'Home',
+    full_name: '',
+    phone: '',
+    city: '',
+    district: '',
+    street: '',
+    zip_code: '',
+    country: 'Uzbekistan',
+    is_default: false,
+  });
+  const [addrSaving, setAddrSaving] = useState(false);
+
+  // Map refs
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+
+
+
+  // Profile data loaded from Supabase profiles table
+  const [profileData, setProfileData] = useState<{
+    full_name: string;
+    username: string;
+    phone: string;
+    bio: string;
+    location: string;
+    website: string;
+    avatar_url: string;
+  } | null>(null);
+
+  // Real user data from Supabase auth + profiles table
+  const userFullName = profileData?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Foydalanuvchi';
   const userEmail = user?.email || '';
-  const userAvatarUrl = user?.user_metadata?.avatar_url || null;
-  const myOrders = orders.filter(o => o.customerDetails.email === userEmail || true); // Showing all for demo purposes
+  const userAvatarUrl = profileData?.avatar_url || user?.user_metadata?.avatar_url || null;
+  const myOrders = orders.filter(o => o.customerDetails.email === userEmail || true);
   
   const filteredOrders = myOrders.filter(o => orderFilter === 'All' || o.status === orderFilter);
 
+  // Load profile from Supabase on mount
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setProfileData(data);
+        });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
     }
   }, [isAuthenticated, navigate]);
+
+  // Load existing profile from Supabase when Edit Profile is opened
+  useEffect(() => {
+    if (activeView === 'edit' && user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) {
+            setProfileForm({
+              full_name: data.full_name || user.user_metadata?.full_name || '',
+              username: data.username || '',
+              phone: data.phone || '',
+              bio: data.bio || '',
+              location: data.location || '',
+              website: data.website || '',
+            });
+          } else {
+            setProfileForm(f => ({ ...f, full_name: user.user_metadata?.full_name || '' }));
+          }
+        });
+    }
+  }, [activeView, user]);
+
+  // Leaflet map initialization and reverse geocoding
+  useEffect(() => {
+    if (showAddrForm && mapContainerRef.current) {
+      // Leaflet marker default image fix for Vite/bundlers
+      const defaultIcon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      });
+
+      // Default center coords (Tashkent)
+      let defaultLat = 41.311081;
+      let defaultLng = 69.240562;
+
+      const map = L.map(mapContainerRef.current).setView([defaultLat, defaultLng], 13);
+      mapRef.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      const marker = L.marker([defaultLat, defaultLng], { icon: defaultIcon, draggable: true }).addTo(map);
+      markerRef.current = marker;
+
+      const updateAddressFromCoords = async (lat: number, lng: number) => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+          const data = await res.json();
+          if (data && data.address) {
+            const addr = data.address;
+            const city = addr.city || addr.town || addr.village || addr.county || '';
+            const district = addr.suburb || addr.district || '';
+            const streetName = addr.road || addr.pedestrian || '';
+            const houseNo = addr.house_number || '';
+            const street = streetName ? `${streetName}${houseNo ? ', ' + houseNo : ''}` : '';
+            const zip = addr.postcode || '';
+            const country = addr.country || 'Uzbekistan';
+
+            setAddrForm(f => ({
+              ...f,
+              city,
+              district,
+              street: street || f.street,
+              zip_code: zip,
+              country
+            }));
+          }
+        } catch (e) {
+          console.error('Reverse geocoding error:', e);
+        }
+      };
+
+      // Search and pan if editing existing address with city & street
+      const locateAddress = async () => {
+        if (editingAddr && editingAddr.city && editingAddr.street) {
+          try {
+            const query = `${editingAddr.street}, ${editingAddr.district || ''}, ${editingAddr.city}, ${editingAddr.country || 'Uzbekistan'}`;
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              map.setView([lat, lon], 16);
+              marker.setLatLng([lat, lon]);
+              return;
+            }
+          } catch (e) {
+            console.error('Geocoding error:', e);
+          }
+        }
+        // otherwise locate user location if available
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const lat = position.coords.latitude;
+              const lon = position.coords.longitude;
+              map.setView([lat, lon], 15);
+              marker.setLatLng([lat, lon]);
+              updateAddressFromCoords(lat, lon);
+            },
+            () => {
+              // fallback to default
+              updateAddressFromCoords(defaultLat, defaultLng);
+            }
+          );
+        } else {
+          updateAddressFromCoords(defaultLat, defaultLng);
+        }
+      };
+
+      locateAddress();
+
+      // Click on map to position marker and update address
+      map.on('click', async (e) => {
+        const { lat, lng } = e.latlng;
+        marker.setLatLng(e.latlng);
+        updateAddressFromCoords(lat, lng);
+      });
+
+      // Drag marker to update address
+      marker.on('dragend', async () => {
+        const { lat, lng } = marker.getLatLng();
+        updateAddressFromCoords(lat, lng);
+      });
+
+      // Fix Leaflet layout inside absolute/framer components
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
+
+      return () => {
+        map.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      };
+    }
+  }, [showAddrForm]);
+
+  const handleProfileSave = async () => {
+    if (!user) return;
+    setProfileLoading(true);
+    setProfileError(null);
+    setProfileSaved(false);
+
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        ...profileForm,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      setProfileError(error.message);
+    } else {
+      setProfileSaved(true);
+      // Update banner immediately after save
+      setProfileData(prev => prev
+        ? { ...prev, ...profileForm }
+        : { ...profileForm, avatar_url: '' }
+      );
+      setTimeout(() => setProfileSaved(false), 3000);
+    }
+    setProfileLoading(false);
+  };
 
   const handleLogout = () => {
     logout();
@@ -35,6 +285,66 @@ export default function Dashboard() {
     setOrderFilter(filter);
     setActiveView('orders');
   };
+
+  // ── Address handlers ──────────────────────────────────
+  const loadAddresses = async () => {
+    if (!user) return;
+    setAddrLoading(true);
+    const { data } = await supabase
+      .from('addresses')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('is_default', { ascending: false });
+    setAddresses(data || []);
+    setAddrLoading(false);
+  };
+
+  const openAddrForm = (addr?: Address) => {
+    if (addr) {
+      setEditingAddr(addr);
+      setAddrForm({
+        title: addr.title,
+        full_name: addr.full_name,
+        phone: addr.phone || '',
+        city: addr.city,
+        district: addr.district || '',
+        street: addr.street,
+        zip_code: addr.zip_code || '',
+        country: addr.country || 'Uzbekistan',
+        is_default: addr.is_default,
+      });
+    } else {
+      setEditingAddr(null);
+      setAddrForm({ title: 'Home', full_name: userFullName, phone: '', city: '', district: '', street: '', zip_code: '', country: 'Uzbekistan', is_default: addresses.length === 0 });
+    }
+    setShowAddrForm(true);
+  };
+
+  const saveAddress = async () => {
+    if (!user) return;
+    setAddrSaving(true);
+    if (editingAddr) {
+      await supabase.from('addresses').update({ ...addrForm, updated_at: new Date().toISOString() }).eq('id', editingAddr.id);
+    } else {
+      await supabase.from('addresses').insert([{ ...addrForm, user_id: user.id }]);
+    }
+    await loadAddresses();
+    setShowAddrForm(false);
+    setAddrSaving(false);
+  };
+
+  const deleteAddress = async (id: string) => {
+    await supabase.from('addresses').delete().eq('id', id);
+    setAddresses(prev => prev.filter(a => a.id !== id));
+  };
+
+  const setDefaultAddress = async (id: string) => {
+    if (!user) return;
+    await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id);
+    await supabase.from('addresses').update({ is_default: true }).eq('id', id);
+    setAddresses(prev => prev.map(a => ({ ...a, is_default: a.id === id })));
+  };
+
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] pb-20">
@@ -71,7 +381,49 @@ export default function Dashboard() {
             </div>
             
             <h2 className="mt-5 text-2xl font-bold text-gray-800">{userFullName}</h2>
+            {profileData?.username && (
+              <p className="text-indigo-500 font-semibold text-sm mt-0.5">@{profileData.username}</p>
+            )}
             <p className="text-gray-500 font-medium mt-1">{userEmail}</p>
+
+            {/* Info chips */}
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
+              {profileData?.phone && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                  </svg>
+                  {profileData.phone}
+                </span>
+              )}
+              {profileData?.location && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                  </svg>
+                  {profileData.location}
+                </span>
+              )}
+              {profileData?.website && (
+                <a
+                  href={profileData.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 rounded-full text-xs text-blue-600 font-medium hover:bg-blue-100 transition"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                  </svg>
+                  {profileData.website.replace(/^https?:\/\//, '')}
+                </a>
+              )}
+            </div>
+
+            {/* Bio */}
+            {profileData?.bio && (
+              <p className="mt-3 mb-2 text-sm text-gray-500 text-center max-w-xs px-4 italic">"{profileData.bio}"</p>
+            )}
           </div>
 
           {/* Decorative Waves */}
@@ -145,6 +497,7 @@ export default function Dashboard() {
                     label="Shipping Address"
                     onClick={() => setActiveView('address')}
                   />
+
                 </div>
                 
                 <button onClick={handleLogout} className="w-full bg-white flex items-center justify-center gap-2 text-red-500 font-medium py-4 rounded-3xl hover:bg-red-50 transition shadow-sm border border-red-50">
@@ -161,39 +514,290 @@ export default function Dashboard() {
           {activeView === 'edit' && (
             <motion.div key="edit-profile" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-50">
                <h3 className="text-xl font-bold mb-6">Profil ma'lumotlari</h3>
-               <div className="space-y-4 max-w-lg">
-                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">To'liq ism</label>
-                   <input type="text" defaultValue={userFullName} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+
+               {/* Success / Error banners */}
+               {profileSaved && (
+                 <div className="mb-4 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm font-semibold flex items-center gap-2">
+                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                   Profil muvaffaqiyatli saqlandi!
                  </div>
+               )}
+               {profileError && (
+                 <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-semibold">
+                   ⚠️ {profileError}
+                 </div>
+               )}
+
+               <div className="space-y-4 max-w-lg">
+                 {/* Email (read only) */}
                  <div>
                    <label className="block text-sm font-medium text-gray-700 mb-1">Email manzil</label>
-                   <input type="email" defaultValue={userEmail} readOnly className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl focus:outline-none text-gray-500 cursor-not-allowed" />
+                   <input type="email" value={userEmail} readOnly className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl focus:outline-none text-gray-500 cursor-not-allowed" />
                  </div>
-                 <button onClick={() => setActiveView(null)} className="mt-4 px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition">Saqlash</button>
+
+                 {/* Full name */}
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">To'liq ism</label>
+                   <input
+                     type="text"
+                     value={profileForm.full_name}
+                     onChange={e => setProfileForm(f => ({ ...f, full_name: e.target.value }))}
+                     placeholder="Ismingizni kiriting"
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   />
+                 </div>
+
+                 {/* Username */}
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Foydalanuvchi nomi</label>
+                   <input
+                     type="text"
+                     value={profileForm.username}
+                     onChange={e => setProfileForm(f => ({ ...f, username: e.target.value }))}
+                     placeholder="@username"
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   />
+                 </div>
+
+                 {/* Phone */}
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Telefon raqam</label>
+                   <input
+                     type="tel"
+                     value={profileForm.phone}
+                     onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))}
+                     placeholder="+998 90 000 00 00"
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   />
+                 </div>
+
+                 {/* Location */}
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Manzil</label>
+                   <input
+                     type="text"
+                     value={profileForm.location}
+                     onChange={e => setProfileForm(f => ({ ...f, location: e.target.value }))}
+                     placeholder="Toshkent, O'zbekiston"
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   />
+                 </div>
+
+                 {/* Bio */}
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                   <textarea
+                     value={profileForm.bio}
+                     onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
+                     rows={3}
+                     placeholder="O'zingiz haqida qisqacha..."
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                   />
+                 </div>
+
+                 {/* Website */}
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Veb-sayt</label>
+                   <input
+                     type="url"
+                     value={profileForm.website}
+                     onChange={e => setProfileForm(f => ({ ...f, website: e.target.value }))}
+                     placeholder="https://example.com"
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   />
+                 </div>
+
+                 <button
+                   onClick={handleProfileSave}
+                   disabled={profileLoading}
+                   className="mt-2 w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:bg-blue-400 transition flex items-center justify-center gap-2"
+                 >
+                   {profileLoading ? (
+                     <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saqlanmoqda...</>
+                   ) : 'Saqlash'}
+                 </button>
                </div>
             </motion.div>
           )}
 
           {activeView === 'address' && (
-            <motion.div key="address" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-50">
-               <h3 className="text-xl font-bold mb-6">Saved Addresses</h3>
-               <div className="border border-gray-200 rounded-2xl p-6 relative">
-                  <span className="absolute top-6 right-6 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg">Default</span>
-                  <p className="font-bold text-gray-800">Home Address</p>
-                  <p className="text-gray-500 mt-2">123 Business Road, Tech Park</p>
-                  <p className="text-gray-500">Tashkent, Uzbekistan 100000</p>
-                  <div className="mt-4 flex gap-3">
-                    <button className="text-blue-600 font-medium text-sm hover:underline">Edit</button>
-                    <button className="text-red-600 font-medium text-sm hover:underline">Delete</button>
+            <motion.div key="address" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-3xl p-8 shadow-sm border border-gray-50"
+              onAnimationStart={() => { if (addresses.length === 0) loadAddresses(); }}
+            >
+              <h3 className="text-xl font-bold mb-6">Saqlangan Manzillar</h3>
+
+              {/* Loading */}
+              {addrLoading && (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+
+              {/* Address list */}
+              {!addrLoading && !showAddrForm && (
+                <div className="space-y-4">
+                  {addresses.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                      </svg>
+                      <p className="text-gray-500 font-medium">Hech qanday manzil yo'q</p>
+                      <p className="text-gray-400 text-sm mt-1">Yangi manzil qo'shing</p>
+                    </div>
+                  ) : (
+                    addresses.map(addr => (
+                      <div key={addr.id} className={`border rounded-2xl p-5 relative transition-all ${addr.is_default ? 'border-blue-300 bg-blue-50/30' : 'border-gray-200'}`}>
+                        {addr.is_default && (
+                          <span className="absolute top-4 right-4 px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-lg">
+                            ✓ Asosiy
+                          </span>
+                        )}
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${addr.title === 'Home' ? 'bg-orange-100 text-orange-500' : addr.title === 'Work' ? 'bg-blue-100 text-blue-500' : 'bg-gray-100 text-gray-500'}`}>
+                            {addr.title === 'Home' ? '🏠' : addr.title === 'Work' ? '🏢' : '📍'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-gray-800">{addr.title} — {addr.full_name}</p>
+                            {addr.phone && <p className="text-gray-500 text-sm mt-0.5">📞 {addr.phone}</p>}
+                            <p className="text-gray-600 text-sm mt-1">{addr.street}{addr.district ? ', ' + addr.district : ''}</p>
+                            <p className="text-gray-600 text-sm">{addr.city}{addr.zip_code ? ' ' + addr.zip_code : ''}, {addr.country}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center gap-4 flex-wrap">
+                          {!addr.is_default && (
+                            <button onClick={() => setDefaultAddress(addr.id)} className="text-blue-600 font-medium text-sm hover:underline">
+                              Asosiy qilish
+                            </button>
+                          )}
+                          <button onClick={() => openAddrForm(addr)} className="text-gray-600 font-medium text-sm hover:underline">
+                            Tahrirlash
+                          </button>
+                          <button onClick={() => deleteAddress(addr.id)} className="text-red-500 font-medium text-sm hover:underline ml-auto">
+                            O'chirish
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Add new button */}
+                  <button
+                    onClick={() => openAddrForm()}
+                    className="w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-medium hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600 transition flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Yangi manzil qo'shish
+                  </button>
+                </div>
+              )}
+
+              {/* Add / Edit Form */}
+              {showAddrForm && (
+                <div className="space-y-4 max-w-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-bold text-gray-800">{editingAddr ? 'Manzilni tahrirlash' : 'Yangi manzil'}</h4>
+                    <button onClick={() => setShowAddrForm(false)} className="text-gray-400 hover:text-gray-600 text-sm">Bekor qilish</button>
                   </div>
-               </div>
-               <button className="mt-6 w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-gray-500 font-medium hover:bg-gray-50 hover:text-gray-700 transition flex items-center justify-center gap-2">
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                 Add New Address
-               </button>
+
+                  {/* Title */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tur</label>
+                    <div className="flex gap-2">
+                      {['Home', 'Work', 'Other'].map(t => (
+                        <button key={t} onClick={() => setAddrForm(f => ({ ...f, title: t }))}
+                          className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${addrForm.title === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-blue-300'}`}>
+                          {t === 'Home' ? '🏠 Uy' : t === 'Work' ? '🏢 Ish' : '📍 Boshqa'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Map Selection */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Xaritadan joylashuvni tanlang</label>
+                    <div ref={mapContainerRef} className="w-full h-64 rounded-xl overflow-hidden border border-gray-200 relative z-10 shadow-inner" />
+                    <p className="text-xs text-gray-400 mt-1">📍 Xaritani bosing yoki markerni suring. Manzil maydonlari avtomatik ravishda to'ldiriladi.</p>
+                  </div>
+
+                  {/* Full name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">To'liq ism</label>
+                    <input type="text" value={addrForm.full_name}
+                      onChange={e => setAddrForm(f => ({ ...f, full_name: e.target.value }))}
+                      placeholder="Ism Familiya" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                    <input type="tel" value={addrForm.phone}
+                      onChange={e => setAddrForm(f => ({ ...f, phone: e.target.value }))}
+                      placeholder="+998 90 000 00 00" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  {/* City + District */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Shahar</label>
+                      <input type="text" value={addrForm.city}
+                        onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))}
+                        placeholder="Toshkent" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Tuman</label>
+                      <input type="text" value={addrForm.district}
+                        onChange={e => setAddrForm(f => ({ ...f, district: e.target.value }))}
+                        placeholder="Yunusobod" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+
+                  {/* Street */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Ko'cha, uy raqami</label>
+                    <input type="text" value={addrForm.street}
+                      onChange={e => setAddrForm(f => ({ ...f, street: e.target.value }))}
+                      placeholder="Amir Temur ko'chasi, 15" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+
+                  {/* Zip + Country */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Pochta kodi</label>
+                      <input type="text" value={addrForm.zip_code}
+                        onChange={e => setAddrForm(f => ({ ...f, zip_code: e.target.value }))}
+                        placeholder="100000" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Mamlakat</label>
+                      <input type="text" value={addrForm.country}
+                        onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))}
+                        placeholder="Uzbekistan" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+
+                  {/* Default checkbox */}
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input type="checkbox" checked={addrForm.is_default}
+                      onChange={e => setAddrForm(f => ({ ...f, is_default: e.target.checked }))}
+                      className="w-4 h-4 accent-blue-600" />
+                    <span className="text-sm font-medium text-gray-700">Asosiy manzil sifatida belgilash</span>
+                  </label>
+
+                  <button onClick={saveAddress} disabled={addrSaving || !addrForm.city || !addrForm.street}
+                    className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:bg-blue-400 transition flex items-center justify-center gap-2">
+                    {addrSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saqlanmoqda...</> : (editingAddr ? 'Yangilash' : 'Qo\'shish')}
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
+
+
+
 
           {activeView === 'orders' && (
             <motion.div key="orders" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-50">
